@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Code Review ✍️</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f0e9d2;
+            font-family: 'Poppins', sans-serif;
+        }
+        .review-box {
+            margin-top: 50px;
+            background: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        pre code {
+            display: block;
+            padding: 12px;
+            border-radius: 8px;
+            white-space: pre-wrap; /* Allows long lines to wrap */
+        }
+        /* Style for error messages */
+        .error-message {
+            color: #dc3545; /* Bootstrap's danger color */
+            font-weight: bold;
+            text-align: center;
+            margin-top: 20px;
+        }
+        /* Style for raw data display in debug */
+        .raw-data-display {
+            font-size: 0.9em;
+            margin-top: 10px;
+            color: #6c757d;
+            word-break: break-all; /* Break long strings */
+            white-space: pre-wrap; /* Preserve formatting of raw data */
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container review-box">
+    <h2 class="text-center mb-4">📝 Your Code Review</h2>
+    <div id="reviewText" style="font-size: 1.1rem;"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+
+<script>
+    // No need for getQueryParam anymore if using sessionStorage primarily
+    // function getQueryParam(param) { ... }
+
+    // ... (formatReview function - remains the same) ...
+
+    function loadReview() {
+        const container = document.getElementById('reviewText');
+
+        // 1. Try to get content from sessionStorage
+        const reviewContentString = sessionStorage.getItem('codeReviewContent');
+
+        if (!reviewContentString) {
+            // Fallback: If sessionStorage is empty, maybe try query param (less reliable for large content)
+            const reviewParam = new URLSearchParams(window.location.search).get('review');
+            if (reviewParam) {
+                // If you still want to handle direct URL param for debugging/backup
+                console.warn("Falling back to URL query parameter. SessionStorage was empty.");
+                let decodedReview;
+                try {
+                    decodedReview = decodeURIComponent(reviewParam);
+                } catch (e) {
+                    console.error("Error decoding URL parameter (fallback):", e);
+                    container.innerHTML = `<div class="error-message">Error decoding fallback review content from URL.</div><div class="raw-data-display"><strong>Problematic URL Parameter:</strong> ${reviewParam}</div>`;
+                    return;
+                }
+                try {
+                    const parsedReview = JSON.parse(decodedReview);
+                    if (parsedReview && typeof parsedReview.output === 'string') {
+                        const formatted = formatReview(parsedReview.output);
+                        container.innerHTML = formatted;
+                        Prism.highlightAll();
+                        return; // Successfully loaded from URL param
+                    } else {
+                        console.error("Fallback URL content did not contain 'output' field:", parsedReview);
+                        container.innerHTML = `<div class="error-message">Fallback URL content in unexpected format.</div><div class="raw-data-display"><strong>Parsed Object (Fallback):</strong><br>${JSON.stringify(parsedReview, null, 2)}</div>`;
+                        return;
+                    }
+                } catch(e) {
+                    console.error("Error parsing JSON from URL parameter (fallback):", e);
+                    container.innerHTML = `<div class="error-message">Error parsing fallback review content from URL. Not valid JSON.</div><div class="raw-data-display"><strong>Raw Decoded Data (Fallback):</strong><br>${decodedReview}</div>`;
+                    return;
+                }
+            }
+
+            // If neither sessionStorage nor URL param has content
+            container.innerHTML = '<div class="error-message">No review content found. Please go back and generate a review.</div>';
+            return;
+        }
+
+        // 2. Parse content from sessionStorage
+        let parsedReview;
+        try {
+            parsedReview = JSON.parse(reviewContentString); // This should be {"output": "..."}
+            console.log("Review content loaded from sessionStorage:", parsedReview);
+        } catch (e) {
+            console.error("Error parsing review content from sessionStorage:", e);
+            container.innerHTML = `<div class="error-message">Error parsing review content stored locally. Data might be corrupted.</div>
+                                   <div class="raw-data-display"><strong>Raw Stored Data:</strong><br>${reviewContentString}</div>`;
+            return;
+        }
+
+        // 3. Display the content
+        if (parsedReview && typeof parsedReview.output === 'string') {
+            const formatted = formatReview(parsedReview.output);
+            container.innerHTML = formatted;
+            Prism.highlightAll();
+        } else {
+            console.error("Stored review object does not contain an 'output' string:", parsedReview);
+            container.innerHTML = `<div class="error-message">The locally stored review content is in an unexpected format. Missing "output" field.</div>
+                                   <div class="raw-data-display"><strong>Parsed Object:</strong><br>${JSON.stringify(parsedReview, null, 2)}</div>`;
+        }
+
+        // Optional: Clear sessionStorage item after use if it's a one-time display
+        // sessionStorage.removeItem('codeReviewContent');
+    }
+
+    loadReview();
+</script>
+</body>
+</html>
+
+</body>
+</html>
